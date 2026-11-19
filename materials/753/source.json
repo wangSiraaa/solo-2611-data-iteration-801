@@ -1,0 +1,26 @@
+{
+  "document_id": "DOC1",
+  "revision": 1,
+  "segments": [
+    {
+      "segment_id": "S1",
+      "revision": 1,
+      "text": "Alpha."
+    },
+    {
+      "segment_id": "S2",
+      "revision": 1,
+      "text": "Beta."
+    },
+    {
+      "segment_id": "S3",
+      "revision": 1,
+      "text": "Gamma."
+    },
+    {
+      "segment_id": "S4",
+      "revision": 1,
+      "text": "Delta."
+    }
+  ]
+}

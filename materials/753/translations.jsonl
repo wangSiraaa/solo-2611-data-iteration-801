@@ -1,0 +1,8 @@
+{"translation_id":"T12","language":"EN","source_refs":[{"segment_id":"S1","revision":1},{"segment_id":"S2","revision":1}],"text":"Alpha Beta."}
+{"translation_id":"T3","language":"EN","source_refs":[{"segment_id":"S3","revision":1}],"text":"Gamma."}
+{"translation_id":"T4","language":"EN","source_refs":[{"segment_id":"S4","revision":1}],"text":"Delta."}
+{"translation_id":"T1","language":"EN","source_refs":[{"segment_id":"S1","revision":1}],"text":"Alpha."}
+{"translation_id":"T23","language":"EN","source_refs":[{"segment_id":"S2","revision":1},{"segment_id":"S3","revision":1}],"text":"Beta Gamma."}
+{"translation_id":"F12","language":"FR","source_refs":[{"segment_id":"S1","revision":1},{"segment_id":"S2","revision":1}],"text":"Un deux."}
+{"translation_id":"F23","language":"FR","source_refs":[{"segment_id":"S2","revision":1},{"segment_id":"S3","revision":1}],"text":"Deux trois."}
+{"translation_id":"F4","language":"FR","source_refs":[{"segment_id":"S4","revision":1}],"text":"Quatre."}

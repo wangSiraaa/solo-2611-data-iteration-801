@@ -1,0 +1,48 @@
+{
+  "format": "translation-package/1",
+  "package_id": "EXAMPLE_ONLY",
+  "document_id": "DOC1",
+  "language": "EN",
+  "source_snapshot": [
+    {
+      "segment_id": "S1",
+      "revision": 1
+    },
+    {
+      "segment_id": "S2",
+      "revision": 1
+    },
+    {
+      "segment_id": "S3",
+      "revision": 1
+    },
+    {
+      "segment_id": "S4",
+      "revision": 1
+    }
+  ],
+  "chunks": [
+    {
+      "translation_id": "T12",
+      "source_ids": [
+        "S1",
+        "S2"
+      ],
+      "text": "Alpha Beta."
+    },
+    {
+      "translation_id": "T3",
+      "source_ids": [
+        "S3"
+      ],
+      "text": "Gamma."
+    },
+    {
+      "translation_id": "T4",
+      "source_ids": [
+        "S4"
+      ],
+      "text": "Delta."
+    }
+  ]
+}

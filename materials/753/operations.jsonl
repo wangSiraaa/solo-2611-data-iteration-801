@@ -1,0 +1,7 @@
+{"operation":"publish_language","language":"EN","save_as":"PACK1"}
+{"operation":"try_publish_language","language":"FR","expect":"no_exact_cover"}
+{"operation":"revise_source_segment","segment":{"segment_id":"S2","revision":2,"text":"Beta revised."}}
+{"operation":"try_publish_language","language":"EN","expect":"no_current_cover"}
+{"operation":"add_translation","translation":{"translation_id":"T2_NEW","language":"EN","source_refs":[{"segment_id":"S2","revision":2}],"text":"Beta revised."}}
+{"operation":"publish_language","language":"EN","save_as":"PACK2"}
+{"operation":"read_old_package","package":"PACK1"}
