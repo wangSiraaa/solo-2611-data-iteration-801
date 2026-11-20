@@ -442,6 +442,56 @@ def cmd_demo(args: argparse.Namespace) -> int:
     return 0 if report["ok"] else 3
 
 
+def cmd_export_offline(args: argparse.Namespace) -> int:
+    """Export a frozen package into an offline bundle directory."""
+
+    from .offline_bundle import build_bundle
+    from .offline_codec import PhraseDictionary
+
+    content = read_package(args.package)
+    problems = validate_package(content)
+    if problems:
+        _emit({"exported": False, "problems": problems})
+        return 4
+    if args.dictionaries:
+        with open(args.dictionaries, encoding="utf-8") as fh:
+            raw = json.load(fh)
+        dictionaries = [
+            PhraseDictionary.from_strings(item["dictionary_id"], item["items"])
+            for item in raw
+        ]
+    else:
+        dictionaries = []
+    manifest = build_bundle(
+        content, dictionaries, args.out, bundle_id=args.bundle_id
+    )
+    _emit(
+        {
+            "exported": True,
+            "out": args.out,
+            "bundle_id": manifest["bundle_id"],
+            "blocks": len(manifest["blocks"]),
+            "dictionaries": len(manifest["dictionaries"]),
+        }
+    )
+    return 0
+
+
+def cmd_demo_offline(args: argparse.Namespace) -> int:
+    """Export frozen packages and install them through the device worker."""
+
+    import tempfile
+
+    from .offline_demo import DEFAULT_MATERIALS, run_offline_demo
+
+    with tempfile.TemporaryDirectory() as tmp:
+        report = run_offline_demo(
+            tmp, materials=args.materials or DEFAULT_MATERIALS
+        )
+    _emit(report)
+    return 0 if report["ok"] else 3
+
+
 # ----------------------------------------------------------------------
 # parser
 # ----------------------------------------------------------------------
@@ -510,6 +560,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp = add("package-show", cmd_package_show, "read and validate a package file")
     sp.add_argument("package")
 
+    sp = add(
+        "export-offline",
+        cmd_export_offline,
+        "export a frozen package into an offline bundle directory",
+    )
+    sp.add_argument("package")
+    sp.add_argument("out")
+    sp.add_argument("--dictionaries", default=None, help="JSON file of [{dictionary_id, items}]")
+    sp.add_argument("--bundle-id", default=None)
+
     sp = add("package-list", cmd_package_list, "list frozen packages")
     sp.add_argument("--language", default=None)
 
@@ -517,6 +577,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--operations", required=True)
 
     add("demo", cmd_demo, "run the end-to-end materials/753 demo")
+
+    sp = add(
+        "demo-offline",
+        cmd_demo_offline,
+        "export frozen packages and install via the separate device worker",
+    )
+    sp.add_argument("--materials", default=None)
     return p
 
 

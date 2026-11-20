@@ -16,6 +16,16 @@ python3 materials/753/package_reader.py data/packages/PACK2.json
 
 # 测试（标准库 unittest，无需 pytest）
 python3 -m unittest discover -s tests -v
+
+# 离线交付端到端（从实际冻结包导出，经独立设备进程安装并读回）
+python3 -m delivery_system.cli demo-offline
+
+# 手工：把某个冻结包导出为离线目录，再用设备 worker 安装/读取
+python3 -m delivery_system.cli export-offline data/packages/PACK2.json out/bundle \
+    --dictionaries dicts.json
+python3 -m delivery_system.offline_worker install --device out/device \
+    --bundle out/bundle --capacity 100000 --traffic 100000
+python3 -m delivery_system.offline_worker read --device out/device
 ```
 
 ## 目录结构
@@ -29,9 +39,16 @@ delivery_system/
   coverage.py            条目评估 + 精确覆盖区间 DP + 失败诊断
   delivery_repository.py 译文条目、覆盖计划、不可变发布包（独立 SQLite）
   package_io.py          translation-package/1 写入与结构/覆盖校验
+  offline_codec.py       短语字典、字面/字典两类指令、最短正文编码与精确解码
+  offline_bundle.py      从冻结包导出离线版本（manifest + 可独立加载的对象文件）
+  offline_planner.py     设备端选表示：字典共享计费、容量/保护、流量上限
+  offline_device.py      设备缓存、原子激活 active.json、断电与坏块语义
+  offline_worker.py      独立进程的设备端 CLI（plan/install/read/space/clear-cache）
+  offline_demo.py        离线端到端复现（经 worker 子进程真实安装并读回）
   cli.py / __main__.py   命令行
   demo.py                materials/753 端到端复现（调用官方 package_reader.py）
 tests/test_delivery.py   20 个测试：覆盖、过期、重组、不可变、规模
+tests/test_offline.py    22 个测试：编码、身份、共享计费、容量、断电、坏块、跨进程
 ```
 
 ## 两侧的实质逻辑
@@ -82,6 +99,44 @@ content_sha256/created_at/source_release`。包一旦写入即不可变：同 id
 | 读旧包 PACK1 | 仍为 S1@1..S4@1 与旧译文 id/文本 |
 
 `package_reader.py` 被以子进程方式真实读取新旧两个包并校验输出。
+
+## 离线阅读器交付（窄带设备）
+
+出版端与设备端**物理分离**：`export-offline` 从**实际冻结包**的 `chunks` 生成离线
+目录；设备则由另一个进程（`offline_worker`）只凭自己的缓存与下载清单安装、读取。
+原包、`package_reader.py`、以及不涉及设备的发布/覆盖流程保持不变。
+
+### 短语字典与两类指令（`offline_codec.py`）
+- 字典：1–127 个非空、不重复的 UTF-8 字节串，按序；正文每项 1 长度字节 + 实际字节，
+  单项 ≤127 字节。至多 4 本字典。
+- 字面指令：`0x01..0x7F` 长度字节 + 1–127 原始字节。字典指令：`0x80..0xFE`
+  一个字节代表第 `op-0x80` 项。字面头高位置 0、字典头高位置 1，两类永不混淆；
+  `0x00`/`0xFF` 非法。
+- 对每个块分别求“纯字面”和“每种字典混合”的最短正文，并列可任选；解码保证还原
+  **精确 UTF-8 字节**。对象身份 = SHA-256(依赖字典身份 + 正文字节)，因此不同字典下
+  即使指令字节相同也**不是**同一对象。
+
+### 设备端选择与预算（`offline_planner.py` / `offline_device.py`）
+- 枚举可用字典子集；字典对象**只计一次**（被多块共享），不按块重复计费——按块计费会选错。
+- 完全相同的对象全机只存一次；本机已有且校验正确的对象复用、不计流量（含依赖身份）。
+- 先满足**容量**：新对象 ∪ 旧版本仍受保护的对象须放得下；未受保护旧缓存可删。
+  在可共存的方案里选下载字节最少者，最后核对本次**流量上限**。
+- 激活在 `active.json` 上原子替换：所有对象先落盘校验，任一坏块则在切换前中止，
+  旧本照常可读；断电于切换前同样保持旧本，已验对象可续用。
+
+### 规格示例（单块 `abcdef`，字典 `abcd,abc,def`，大小 13）
+| 设备 | 结果 |
+|---|---|
+| 已装字典、空间充足 | 字典体 2 字节（`81 82`），流量 2 |
+| 空设备、流量上限 7 | 选纯字面 7 字节 |
+| 已装字典、原文 `abcdeg`、上限 2 | 拒收（无两字典指令拼法；字典体实为 4，字面 7） |
+
+### 原子更新放不下（`demo-offline` 场景）
+真实发布 `OLD1..OLD4 → PACK_OLD`、改修订后 `NEW1..NEW4 → PACK_NEW`；四块共享短语
+`COMMONPHR`，一本 10 字节字典被四块共享，故“共享一次”方案 46 字节 < 纯字面 68 字节，
+而“每块各算一次字典”会误选字面。旧本占用 46 字节。容量取 46（=目标书自身）时：
+目标书单独放得下，但旧本受保护 + 新书 = 92 > 46，**原子更新放不下而拒收，旧本继续可读**；
+换到新设备或扩容设备后安装成功，读取端恢复完整新译文（`demo-offline` 全 45 项校验通过）。
 
 ## 规模与不扩平台
 
